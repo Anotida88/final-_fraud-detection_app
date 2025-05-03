@@ -23,7 +23,7 @@ st.subheader("Enter Claim Information")
 
 education_level = st.number_input("Education Level", min_value=0.0, max_value=10.0, value=5.0)
 policy_type = st.number_input("Policy Type", min_value=0.0, max_value=5.0, value=1.0)
-gender = st.selectbox("Gender", ["0", "1"])  # Assume 0 and 1 for Gender
+gender = st.selectbox("Gender", ["Male", "Female"])  # Convert Gender to text for better user input
 insurance_type = st.number_input("Insurance Type", min_value=0.0, max_value=5.0, value=1.0)
 
 cause_of_death = st.number_input("Cause of Death", min_value=0.0, max_value=5.0, value=1.0)
@@ -52,6 +52,12 @@ input_data = pd.DataFrame([{
     "Claim_Amount": claim_amount,
     "Months_as_Customer": months_as_customer
 }])
+
+# Preprocess Gender (convert it to numeric)
+input_data['Gender'] = input_data['Gender'].map({'Male': 0, 'Female': 1})
+
+# If you have other categorical columns, convert them here (for example, using pd.get_dummies)
+# input_data = pd.get_dummies(input_data, drop_first=True)
 
 # Predict
 if st.button("Predict"):
