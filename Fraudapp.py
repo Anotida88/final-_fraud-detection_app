@@ -4,10 +4,9 @@ import joblib
 import os
 
 # File paths
-xgb_path= "xgboost_best_model.pkl"
+xgb_path = "xgboost_best_model.pkl"
 rf_path = "random_forest_best_model.pkl"
 
-rf_path = "C:/Users/taonga/Downloads/project/random_forest_best_model.pkl"
 # Load models
 xgb_model = joblib.load(xgb_path)
 rf_model = joblib.load(rf_path)
