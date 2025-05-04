@@ -1,14 +1,8 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import shap
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import confusion_matrix
-from datetime import datetime
-import csv
-import os
 import time
+from datetime import datetime
 
 # File paths
 xgb_path = "xgboost_best_model.pkl"
@@ -33,35 +27,10 @@ left, right = st.columns(2)
 
 with left:
     st.subheader("🎯 Make a Prediction")
-
     model_choice = st.selectbox("Choose Model:", ["XGBoost (Optuna-tuned)", "Random Forest"])
-    education_level = st.number_input("Education Level", min_value=0.0, max_value=10.0, value=5.0)
-    policy_type = st.number_input("Policy Type", min_value=0.0, max_value=5.0, value=1.0)
-    gender = st.selectbox("Gender", ["Male", "Female"])
-    insurance_type = st.number_input("Insurance Type", min_value=0.0, max_value=5.0, value=1.0)
-    cause_of_death = st.number_input("Cause of Death", min_value=0.0, max_value=5.0, value=1.0)
-    death_location = st.number_input("Death Location", min_value=0.0, max_value=5.0, value=1.0)
-    beneficiary_relation = st.number_input("Beneficiary Relation", min_value=0.0, max_value=5.0, value=1.0)
-    medical_history = st.number_input("Medical History", min_value=0.0, max_value=5.0, value=1.0)
-    treatment_code = st.number_input("Treatment Code", min_value=0.0, max_value=5.0, value=1.0)
-    claim_history = st.number_input("Claim History", min_value=0.0, max_value=5.0, value=1.0)
-    claim_amount = st.number_input("Claim Amount", min_value=0.0, value=10000.0)
-    months_as_customer = st.number_input("Months as Customer", min_value=0, value=10)
-
-    input_data = pd.DataFrame([{
-        "education_level": education_level,
-        "Policy_Type": policy_type,
-        "Gender": 0 if gender == "Male" else 1,
-        "Insurance_Type": insurance_type,
-        "cause_of_death": cause_of_death,
-        "death_location": death_location,
-        "beneficiary_relation": beneficiary_relation,
-        "medical_history": medical_history,
-        "Treatment_Code": treatment_code,
-        "Claim History": claim_history,
-        "Claim_Amount": claim_amount,
-        "Months_as_Customer": months_as_customer
-    }])
+    
+    # Inputs for single prediction (same as before)
+    # (Add your input fields here like education_level, policy_type, etc.)
 
     if st.button("🔍 Predict"):
         with st.spinner("Predicting..."):
@@ -83,21 +52,52 @@ with left:
 
             st.success(f"Prediction: {label}")
             st.write(f"**Probability of fraud:** {prob:.2%}")
-
             st.rerun()
-  # <--- Auto-refresh page after prediction
 
 with right:
-    st.subheader("📊 Live Dashboard")
-    if os.path.exists(log_file):
-        log_df = pd.read_csv(log_file)
+    st.subheader("📊 Upload Claims CSV for Batch Prediction")
+    
+    uploaded_file = st.file_uploader("Upload CSV with Claims Data", type=["csv"])
+    
+    if uploaded_file is not None:
+        # Read the uploaded CSV file
+        claims_data = pd.read_csv(uploaded_file)
+        
+        st.write("Uploaded Claims Data:")
+        st.dataframe(claims_data.head())  # Display the first few rows of the uploaded file
 
-        col1, col2 = st.columns(2)
-        col1.metric("Total Predictions", len(log_df))
-        col2.metric("Fraud Rate", f"{(log_df['Prediction'] == 1).mean() * 100:.1f}%")
+        # Preprocess data for prediction (ensure the columns match with your model input)
+        claims_data["Gender"] = claims_data["Gender"].map({"Male": 0, "Female": 1})
+        
+        # Assuming the CSV file contains columns that match the model's input
+        prediction_data = claims_data[[
+            "education_level", "Policy_Type", "Gender", "Insurance_Type", 
+            "cause_of_death", "death_location", "beneficiary_relation", 
+            "medical_history", "Treatment_Code", "Claim History", 
+            "Claim_Amount", "Months_as_Customer"
+        ]]
+        
+        # Make predictions on the whole dataset
+        if st.button("🔍 Predict All Claims"):
+            with st.spinner("Making batch predictions..."):
+                time.sleep(1)
+                
+                if model_choice == "XGBoost (Optuna-tuned)":
+                    model = xgb_model
+                else:
+                    model = rf_model
+                
+                predictions = model.predict(prediction_data)
+                prob_predictions = model.predict_proba(prediction_data)[:, 1]  # Fraud probabilities
+                
+                claims_data["Prediction"] = ["Fraud" if p == 1 else "Not Fraud" for p in predictions]
+                claims_data["Probability"] = prob_predictions
 
-        st.markdown("### Fraud Distribution")
-        st.bar_chart(log_df["Fraud_Label"].value_counts())
+                st.write("Prediction Results:")
+                st.dataframe(claims_data)  # Display the predictions
 
-        st.markdown("### Prediction Log")
-        st.dataframe(log_df.tail(10), use_container_width=True)
+                # Optionally, save results to a new CSV file
+                output_file = "predicted_claims.csv"
+                claims_data.to_csv(output_file, index=False)
+                st.download_button("Download Predicted Claims", output_file)
+
