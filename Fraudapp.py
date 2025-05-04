@@ -84,7 +84,8 @@ with left:
             st.success(f"Prediction: {label}")
             st.write(f"**Probability of fraud:** {prob:.2%}")
 
-            st.experimental_rerun()  # <--- Auto-refresh page after prediction
+            st.rerun()
+  # <--- Auto-refresh page after prediction
 
 with right:
     st.subheader("📊 Live Dashboard")
